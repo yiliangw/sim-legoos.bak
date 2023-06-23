@@ -9,4 +9,7 @@
 		"ms-python.python"
 	],
 	"remoteUser": "simbricks",
+	"mounts": [
+		"source=${localEnv:HOME}/.ssh,target=/home/simbricks/.ssh,type=bind,consistency=cached"
+	]
 }
