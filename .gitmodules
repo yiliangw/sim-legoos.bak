@@ -1,0 +1,6 @@
+[submodule "LegoOS"]
+	path = LegoOS
+	url = git@github.com:yiliangw/LegoOS.git
+[submodule "simbricks"]
+	path = simbricks
+	url = git@github.com:yiliangw/simbricks.git
