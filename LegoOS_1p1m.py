@@ -29,12 +29,12 @@ class LegoOSQemuHost(QemuHost):
         The command from LegoOS
         '''
         cmd = (
-            f'{env.qemu_path} -serial file:./ttyS0.log -serial mon:stdio '
+            f'{env.qemu_path} -serial mon:stdio '
             '-cpu Skylake-Server -display none -nic none -no-reboot '
-            '-d int,cpu_reset -D ./qemu.log '
             f'-kernel {self.kernel_path} '
             '-append "earlyprintk=ttyS0 console=ttyS0 memmap=2G$4G" '
-            f'-m 4G -smp 2 '
+            f'-m 4G -smp 8 '
+            # '-d int,cpu_reset '
         )
 
         if self.sync:
