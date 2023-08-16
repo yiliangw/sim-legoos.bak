@@ -39,7 +39,7 @@ if [ $1 == "1p1m" ]; then
 elif [ $1 == "2p" ]; then
     update_image 2p_node_0
     update_image 2p_node_1
-    python3 ${SIMBRICKS_DIR}/experiments/run.py --force \
+    python3 ${SIMBRICKS_DIR}/experiments/run.py --force --verbose \
         --repo=$SIMBRICKS_DIR --workdir=$OUT_DIR --outdir=$OUT_DIR --cpdir=$OUT_DIR \
         --parallel --cores=$(nproc) --runs=0 \
         ${REPO_DIR}/LegoOS_2p.py

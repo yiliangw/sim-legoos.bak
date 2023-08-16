@@ -12,11 +12,13 @@ import math
 
 class LegoOSQemuHost(QemuHost):
 
-    def __init__(self, kernel_path):
+    def __init__(self, kernel_path, debug=False):
         config = LinuxNode()
         config.app = IdleHost()
         super().__init__(config)
+        # self.sync_period = 500000
         self.kernel_path = kernel_path
+        self.debug = debug
 
     def run_cmd(self, env):
         accel = ',accel=kvm:tcg' if not self.sync else ''
@@ -33,9 +35,11 @@ class LegoOSQemuHost(QemuHost):
             '-cpu Skylake-Server -display none -nic none -no-reboot '
             f'-kernel {self.kernel_path} '
             '-append "earlyprintk=ttyS0 console=ttyS0 memmap=2G$4G" '
-            f'-m 4G -smp 4 '
-            # '-d int,cpu_reset '
+            f'-m 8G -smp 4 '
         )
+
+        if self.debug:
+            cmd += ' -s -S '
 
         if self.sync:
             unit = self.cpu_freq[-3:]
@@ -66,7 +70,10 @@ class LegoOSQemuHost(QemuHost):
         assert len(self.memdevs) == 0
         return cmd
 
-    
+
+SYNC = False
+SYNC_MODE = 2 if SYNC else 0
+
 e = Experiment(name='LegoOS_2p')
 e.checkpoint = True  # use checkpoint and restore to speed up simulation
 
@@ -75,31 +82,36 @@ node_0_img_path = img_prefix + '/2p_node_0.bzImage'
 node_1_img_path = img_prefix + '/2p_node_1.bzImage'
 
 # node_0
-node_0 = LegoOSQemuHost(node_0_img_path)
+node_0 = LegoOSQemuHost(node_0_img_path, debug=False)
+node_0.sync = SYNC
 node_0.name = 'node_0'
 node_0.wait = True
 e.add_host(node_0)
 
 # node_0 NIC
 node_0_nic  = E1000NIC()
+node_0_nic.sync_mode = SYNC_MODE
 node_0_nic.mac = '52:54:00:12:34:56'
 node_0.add_nic(node_0_nic)
 e.add_nic(node_0_nic)
 
 # node_1
-node_1 = LegoOSQemuHost(node_1_img_path)
+node_1 = LegoOSQemuHost(node_1_img_path, debug=False)
+node_1.sync = SYNC
 node_1.name = 'node_1'
 node_1.wait = True
 e.add_host(node_1)
 
 # node_1 NIC
 node_1_nic = E1000NIC()
+node_1_nic.sync_mode = SYNC_MODE
 node_1_nic.mac = '52:54:00:12:34:57'
 node_1.add_nic(node_1_nic)
 e.add_nic(node_1_nic)
 
 # network
 network = SwitchNet()
+network.sync = SYNC
 node_0_nic.set_network(network)
 node_1_nic.set_network(network)
 e.add_network(network)
