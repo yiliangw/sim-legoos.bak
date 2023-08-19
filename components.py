@@ -5,7 +5,7 @@ import math
 
 class LegoOSQemuHost(QemuHost):
 
-    def __init__(self, kernel_path, memory, cores, debug=False):
+    def __init__(self, kernel_path, memory, cores, debug=False, debug_port=1234):
         config = LinuxNode()
         config.app = IdleHost()
         super().__init__(config)
@@ -14,6 +14,7 @@ class LegoOSQemuHost(QemuHost):
         self.memory = memory
         self.cores = cores
         self.debug = debug
+        self.debug_port = debug_port
 
     def run_cmd(self, env):
         accel = ',accel=kvm:tcg' if not self.sync else ''
@@ -34,7 +35,7 @@ class LegoOSQemuHost(QemuHost):
         )
 
         if self.debug:
-            cmd += ' -s -S '
+            cmd += f' -gdb tcp:localhost:{self.debug_port} -S '
 
         if self.sync:
             unit = self.cpu_freq[-3:]

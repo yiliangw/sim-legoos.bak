@@ -20,28 +20,28 @@ img_prefix = os.path.abspath(os.path.dirname(__file__) + '/images')
 pcomponent_img_path = img_prefix + '/1p1m_pcomponent.bzImage'
 mcomponent_img_path = img_prefix + '/1p1m_mcomponent.bzImage'
 
-# node_0
-pcomponent = LegoOSQemuHost(pcomponent_img_path, memory='8G', cores=8, debug=False)
+# pcomponent
+pcomponent = LegoOSQemuHost(pcomponent_img_path, memory='8G', cores=8, debug=False, debug_port=9000)
 pcomponent.sync = SYNC
 pcomponent.name = 'pcomponent'
 pcomponent.wait = True
 e.add_host(pcomponent)
 
-# node_0 NIC
+# pcomponent NIC
 pcomponent_nic  = E1000NIC()
 pcomponent_nic.sync_mode = SYNC_MODE
 pcomponent_nic.mac = '52:54:00:12:34:56'
 pcomponent.add_nic(pcomponent_nic)
 e.add_nic(pcomponent_nic)
 
-# node_1
-mcomponent = LegoOSQemuHost(mcomponent_img_path, memory='8G', cores=8, debug=False)
+# mcomponent
+mcomponent = LegoOSQemuHost(mcomponent_img_path, memory='8G', cores=8, debug=False, debug_port=9001)
 mcomponent.sync = SYNC
 mcomponent.name = 'mcomponent'
 mcomponent.wait = True
 e.add_host(mcomponent)
 
-# node_1 NIC
+# mcomponent NIC
 mcomponent_nic = E1000NIC()
 mcomponent_nic.sync_mode = SYNC_MODE
 mcomponent_nic.mac = '52:54:00:12:34:57'
