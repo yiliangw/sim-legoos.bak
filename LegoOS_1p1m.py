@@ -10,18 +10,23 @@ import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from components import LegoOSQemuHost
 
-SYNC = False
+SYNC = os.getenv('LEGOSIM_SYNC')
+PCOMPONENT_IMG = os.getenv('LEGOSIM_PCOMPONENT_IMG')
+MCOMPONENT_IMG = os.getenv('LEGOSIM_MCOMPONENT_IMG')
+
+if SYNC is None or PCOMPONENT_IMG is None or MCOMPONENT_IMG is None:
+    sys.stderr.write(
+        'LEGOSIM_SYNC LEGOSIM_PCOMPONENT_IMG or LEGOSIM_MCOMPONENT_IMG not specified')
+    exit(1)
+
+SYNC = True if SYNC == 1 else False
 SYNC_MODE = 2 if SYNC else 0
 
 e = Experiment(name='LegoOS_1p1m')
 e.checkpoint = True  # use checkpoint and restore to speed up simulation
 
-img_prefix = os.path.abspath(os.path.dirname(__file__) + '/images')
-pcomponent_img_path = img_prefix + '/1p1m_pcomponent.bzImage'
-mcomponent_img_path = img_prefix + '/1p1m_mcomponent.bzImage'
-
 # pcomponent
-pcomponent = LegoOSQemuHost(pcomponent_img_path, memory='8G', cores=8, debug=False, debug_port=9000)
+pcomponent = LegoOSQemuHost(PCOMPONENT_IMG, memory='8G', cores=8, debug=False, debug_port=9000)
 pcomponent.sync = SYNC
 pcomponent.name = 'pcomponent'
 pcomponent.wait = True
@@ -35,7 +40,7 @@ pcomponent.add_nic(pcomponent_nic)
 e.add_nic(pcomponent_nic)
 
 # mcomponent
-mcomponent = LegoOSQemuHost(mcomponent_img_path, memory='8G', cores=8, debug=False, debug_port=9001)
+mcomponent = LegoOSQemuHost(MCOMPONENT_IMG, memory='8G', cores=8, debug=False, debug_port=9001)
 mcomponent.sync = SYNC
 mcomponent.name = 'mcomponent'
 mcomponent.wait = True
