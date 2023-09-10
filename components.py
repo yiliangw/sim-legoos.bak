@@ -30,6 +30,7 @@ class LegoOSQemuHost(QemuHost):
             f'{env.qemu_path} -serial mon:stdio '
             '-cpu Skylake-Server -display none -nic none -no-reboot '
             f'-kernel {self.kernel_path} '
+            f'-L {env.repodir}/sims/external/qemu/pc-bios/ '
             '-append "earlyprintk=ttyS0 console=ttyS0 memmap=2G$4G" '
             f'-m {self.memory} -smp {self.cores} '
         )
