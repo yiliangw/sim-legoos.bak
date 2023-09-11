@@ -1,4 +1,7 @@
 SHELL := /bin/bash
+
+linux_version := 3.13.1
+
 repo_dir := .
 lego_dir := $(repo_dir)/LegoOS
 config_dir := $(repo_dir)/config
@@ -6,13 +9,16 @@ simbricks_dir := $(repo_dir)/simbricks
 out_dir := $(repo_dir)/out
 img_dir := $(repo_dir)/images
 build_dir := $(img_dir)/lego.build
+module_dir := $(img_dir)/modules
+kernel_dir := $(img_dir)/kernel/linux-$(linux_version)
 
 usr_dir := $(build_dir)/usr
 usr_objs := $(addprefix $(usr_dir)/, general.o)
 
 run_exp_cmd := python3 $(simbricks_dir)/experiments/run.py --force --verbose \
 	--repo=$(simbricks_dir) --workdir=$(out_dir) --cpdir=$(out_dir) \
-	--parallel --cores=$(shell nproc) --runs=0
+	--runs=0 \
+	# --parallel --cores=$(shell nproc)
 
 # 2-pcomponent experiement
 2p_images := $(addprefix $(img_dir)/, 2p_node_0.bzImage 2p_node_1.bzImage)
@@ -36,8 +42,16 @@ run_exp_cmd := python3 $(simbricks_dir)/experiments/run.py --force --verbose \
 	LEGOSIM_MCOMPONENT_IMG=$(img_dir)/1p1m_mcomponent.bzImage \
 	$(run_exp_cmd) $(abspath $(repo_dir)/LegoOS_1p1m.py)
 
+# 1-pcomponent-1-mcomponent-1-scomponent experiment
+.PHONY: 1p1m1s-images
+1p1m1s-images: $(addprefix $(module_dir)/, ethfit.ko storage.ko)
 
-# Build LegoOS bzImage
+.PHONY: 1p1m1s-run
+1p1m1s-run:
+	LEGOSIM_SYNC=0 LEGOSIM_SCOMP_MAC="52:54:00:12:34:58" \
+	$(run_exp_cmd) $(abspath $(repo_dir)/LegoOS_1p1m1s.py)
+
+# LegoOS bzImage
 $(img_dir)/%.bzImage: $(config_dir)/%.config $(lego_dir) $(usr_objs_path) \
 		$(usr_dir)
 	$(eval img_name := $(basename $(notdir $@)))
@@ -61,9 +75,21 @@ $(usr_objs): $(wildcard $(lego_dir)/usr/*)
 	cp -r $(lego_dir)/usr $(usr_dir)
 	make -s -C $(usr_dir) $(notdir $(usr_objs))
 
+# LegoOS kernel module
+$(module_dir)/ethfit.ko: $(lego_dir)/linux-modules/fit/eth $(lego_dir)
+	mkdir -p $(module_dir)
+	KERNEL_PATH=$(abspath $(kernel_dir)) make -C $<
+	cp $</ethfit.ko $@
 
-.PHONY: clean-images
-clean-images:
-	rm -rf $(img_dir)/*
+$(module_dir)/storage.ko: $(lego_dir)/linux-modules/storage $(lego_dir)
+	mkdir -p $(module_dir)
+	KERNEL_PATH=$(abspath $(kernel_dir)) make -C $<
+	cp $</storage.ko $@
+
+
+
+# .PHONY: clean-images
+# clean-images:
+# 	rm -rf $(img_dir)/*
 
 
