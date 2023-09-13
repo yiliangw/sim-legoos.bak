@@ -5,26 +5,30 @@ import typing as tp
 import math
 import os
 
+class LegoOSApp(nodec.AppConfig):
 
-class LegoOSNode(nodec.NodeConfig):
-    
     def __init__(self):
         super().__init__()
 
 
 class LegoModuleLoading(nodec.AppConfig):
     
-    LEGO_MODULE_DIR = os.path.dirname(os.path.abspath(__file__)) + '/images/modules'
+    PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
+    LEGO_MODULE_DIR = f'{PROJECT_DIR}/images/modules'
     
-    def __init__(self, module_list: tp.List[str]):
+    def __init__(self, module_list: tp.List[str], resource_list: tp.List[tuple[str,str]]=[]):
         super().__init__()
         self.module_list = module_list
+        self.resource_list = resource_list
 
     def config_files(self):
         m = {}
+        r = {}
         for module in self.module_list:
             m[module] = open(f'{self.LEGO_MODULE_DIR}/{module}', 'rb')
-        return {**m, **super().config_files()}
+        for dst_f, src_f in self.resource_list:
+            r[dst_f] = open(f'{self.LEGO_MODULE_DIR}/{src_f}', 'rb')
+        return {**m, **r, **super().config_files()}
 
     def run_cmds(self, node):
         cmds = []
@@ -35,12 +39,22 @@ class LegoModuleLoading(nodec.AppConfig):
         return cmds
 
 
+class LegoOSNode(nodec.NodeConfig):
+    
+    def __init__(self, kernel_path, memory='8G', cores=8):
+        super().__init__()
+        self.memory = memory
+        self.cores = cores
+        self.app = LegoOSApp()
+        self.kernel_path = kernel_path
+
+
 class LegoModuleNode(nodec.NodeConfig):
 
-    def __init__(self, module_list: tp.List[str]):
+    def __init__(self, module_list: tp.List[str], memory='8G', cores=8):
         super().__init__()
-        self.cores = 8
-        self.memory = '8G'
+        self.memory = memory
+        self.cores = cores
 
         self.app = LegoModuleLoading(module_list)
         self.images_path = os.path.dirname(os.path.abspath(__file__)) + '/images'
@@ -51,9 +65,10 @@ class LegoModuleNode(nodec.NodeConfig):
 
 class LegoModuleQemuHost(sim.QemuHost):
 
-    def __init__(self, node_config: LegoModuleNode):
+    def __init__(self, node_config: LegoModuleNode, debug=False, debug_port=1234):
         super().__init__(node_config)
-
+        self.debug = debug
+        self.debug_port = debug_port
     
     def prep_cmds(self, env):
         return [
@@ -61,7 +76,6 @@ class LegoModuleQemuHost(sim.QemuHost):
             f'backing_file="{self.node_config.lego_disk_img}" '
             f'{env.hdcopy_path(self)}'
         ]
-    
     
     def run_cmd(self, env):
         accel = ',accel=kvm:tcg' if not self.sync else ''
@@ -81,6 +95,9 @@ class LegoModuleQemuHost(sim.QemuHost):
             f'-m {self.node_config.memory} -smp {self.node_config.cores} '
             f'-L {env.repodir}/sims/external/qemu/pc-bios/ '
         )
+
+        if self.debug:
+            cmd += f' -gdb tcp:localhost:{self.debug_port} -S '
 
         if self.sync:
             unit = self.cpu_freq[-3:]
@@ -114,13 +131,8 @@ class LegoModuleQemuHost(sim.QemuHost):
 
 class LegoOSQemuHost(sim.QemuHost):
 
-    def __init__(self, kernel_path, memory, cores, debug=False, debug_port=1234):
-        config = nodec.LinuxNode()
-        super().__init__(config)
-        # self.sync_period = 500000
-        self.kernel_path = kernel_path
-        self.memory = memory
-        self.cores = cores
+    def __init__(self, node_config: LegoOSNode, debug=False, debug_port=1234):
+        super().__init__(node_config)
         self.debug = debug
         self.debug_port = debug_port
 
@@ -137,10 +149,10 @@ class LegoOSQemuHost(sim.QemuHost):
         cmd = (
             f'{env.qemu_path} -serial mon:stdio '
             '-cpu Skylake-Server -display none -nic none -no-reboot '
-            f'-kernel {self.kernel_path} '
+            f'-kernel {self.node_config.kernel_path} '
             f'-L {env.repodir}/sims/external/qemu/pc-bios/ '
             '-append "earlyprintk=ttyS0 console=ttyS0 memmap=2G$4G" '
-            f'-m {self.memory} -smp {self.cores} '
+            f'-m {self.node_config.memory} -smp {self.node_config.cores} '
         )
 
         if self.debug:
@@ -174,76 +186,4 @@ class LegoOSQemuHost(sim.QemuHost):
         # qemu does not currently support mem device ports
         assert len(self.memdevs) == 0
         return cmd
-
-
-
-class LegoComponent(LegoOSQemuHost):
-
-    def __init__(self, kernel_path):
-        config = LinuxNode()
-        config.app = IdleHost()
-        super().__init__(config)
-
-    def run_cmd(self, env):
-        accel = ',accel=kvm:tcg' if not self.sync else ''
-        if self.node_config.kcmd_append:
-            kcmd_append = ' ' + self.node_config.kcmd_append
-        else:
-            kcmd_append = ''
-
-        '''
-        The command from LegoOS
-        '''
-        cmd = (
-            f'{env.qemu_path} -serial mon:stdio '
-            '-cpu Skylake-Server -display none -nic none -no-reboot '
-            f'-kernel {self.kernel_path} '
-            f'-L {env.repodir}/sims/external/qemu/pc-bios/ '
-            '-append "earlyprintk=ttyS0 console=ttyS0 memmap=2G$4G" '
-            f'-m {self.memory} -smp {self.cores} '
-        )
-
-        if self.debug:
-            cmd += f' -gdb tcp:localhost:{self.debug_port} -S '
-
-        if self.sync:
-            unit = self.cpu_freq[-3:]
-            if unit.lower() == 'ghz':
-                base = 0
-            elif unit.lower() == 'mhz':
-                base = 3
-            else:
-                raise ValueError('cpu frequency specified in unsupported unit')
-            num = float(self.cpu_freq[:-3])
-            shift = base - int(math.ceil(math.log(num, 2)))
-
-            cmd += f' -icount shift={shift},sleep=off '
-
-        for dev in self.pcidevs:
-            cmd += f'-device simbricks-pci,socket={env.dev_pci_path(dev)}'
-            if self.sync:
-                cmd += ',sync=on'
-                cmd += f',pci-latency={self.pci_latency}'
-                cmd += f',sync-period={self.sync_period}'
-            else:
-                cmd += ',sync=off'
-            cmd += ' '
-
-        # qemu does not currently support net direct ports
-        assert len(self.net_directs) == 0
-        # qemu does not currently support mem device ports
-        assert len(self.memdevs) == 0
-        return cmd
-        
-
-class LegoPComponent(LegoOSQemuHost):
-
-    def __init__(self, kernel_path, memory='8G', cores=8, debug=False, debug_port=1234):
-        super().__init__(kernel_path, memory, cores, debug, debug_port)
-
-
-class LegoMComponent(LegoOSQemuHost):
-
-    def __init__(self, kerenl_path, memory='8G', cores=8, debug=False, debug_port=1234):
-        super().__init__(kerenl_path, memory, cores, debug, debug_port)
     

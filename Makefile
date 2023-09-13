@@ -44,11 +44,15 @@ run_exp_cmd := python3 $(simbricks_dir)/experiments/run.py --force --verbose \
 
 # 1-pcomponent-1-mcomponent-1-scomponent experiment
 .PHONY: 1p1m1s-images
-1p1m1s-images: $(addprefix $(module_dir)/, ethfit.ko storage.ko)
+1p1m1s-images: $(addprefix $(module_dir)/, ethfit.ko storage.ko) \
+	$(addprefix $(img_dir)/, 1p1m1s_pcomponent.bzImage 1p1m1s_mcomponent.bzImage)
 
 .PHONY: 1p1m1s-run
 1p1m1s-run:
-	LEGOSIM_SYNC=0 LEGOSIM_SCOMP_MAC="52:54:00:12:34:58" \
+	LEGOSIM_SYNC=1 LEGOSIM_PCOMP_MAC="52:54:00:12:34:56" \
+	LEGOSIM_MCOMP_MAC="52:54:00:12:34:57" LEGOSIM_SCOMP_MAC="52:54:00:12:34:58" \
+	LEGOSIM_PCOMP_IMG=$(img_dir)/1p1m1s_pcomponent.bzImage \
+	LEGOSIM_MCOMP_IMG=$(img_dir)/1p1m1s_mcomponent.bzImage \
 	$(run_exp_cmd) $(abspath $(repo_dir)/LegoOS_1p1m1s.py)
 
 # LegoOS bzImage
@@ -86,7 +90,8 @@ $(module_dir)/storage.ko: $(lego_dir)/linux-modules/storage $(lego_dir)
 	KERNEL_PATH=$(abspath $(kernel_dir)) make -C $<
 	cp $</storage.ko $@
 
-
+touch-lego:
+	touch $(lego_dir)
 
 # .PHONY: clean-images
 # clean-images:
