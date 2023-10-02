@@ -27,7 +27,7 @@ class LegoModuleLoading(nodec.AppConfig):
         for module in self.module_list:
             m[module] = open(f'{self.LEGO_MODULE_DIR}/{module}', 'rb')
         for dst_f, src_f in self.resource_list:
-            r[dst_f] = open(f'{self.LEGO_MODULE_DIR}/{src_f}', 'rb')
+            r[dst_f] = open(f'{src_f}', 'rb')
         return {**m, **r, **super().config_files()}
 
     def run_cmds(self, node):
@@ -51,12 +51,11 @@ class LegoOSNode(nodec.NodeConfig):
 
 class LegoModuleNode(nodec.NodeConfig):
 
-    def __init__(self, module_list: tp.List[str], memory='8G', cores=8):
+    def __init__(self, memory='8G', cores=8):
         super().__init__()
         self.memory = memory
         self.cores = cores
 
-        self.app = LegoModuleLoading(module_list)
         self.images_path = os.path.dirname(os.path.abspath(__file__)) + '/images'
         self.lego_disk_img = f'{self.images_path}/disk/ubuntu-14.04'
         self.lego_userdata_img = f'{self.images_path}/disk/user_data.img'
@@ -85,7 +84,7 @@ class LegoModuleQemuHost(sim.QemuHost):
             kcmd_append = ''
 
         cmd = (
-            f'{env.qemu_path} -machine q35{accel} -enable-kvm -serial mon:stdio '
+            f'{env.qemu_path} -machine q35{accel} -serial mon:stdio '
             '-cpu Skylake-Server -display none -nic none '
             f'-drive file={env.hdcopy_path(self)},if=ide,index=0,media=disk '
             f'-drive file={env.cfgtar_path(self)},if=ide,index=1,media=disk,driver=raw '
@@ -136,6 +135,9 @@ class LegoOSQemuHost(sim.QemuHost):
         self.debug = debug
         self.debug_port = debug_port
 
+    def prep_cmds(self, env):
+        return ''
+
     def run_cmd(self, env):
         accel = ',accel=kvm:tcg' if not self.sync else ''
         if self.node_config.kcmd_append:
@@ -147,11 +149,11 @@ class LegoOSQemuHost(sim.QemuHost):
         The command from LegoOS
         '''
         cmd = (
-            f'{env.qemu_path} -serial mon:stdio '
+            f'{env.qemu_path} -machine q35{accel} -serial mon:stdio '
             '-cpu Skylake-Server -display none -nic none -no-reboot '
             f'-kernel {self.node_config.kernel_path} '
             f'-L {env.repodir}/sims/external/qemu/pc-bios/ '
-            '-append "earlyprintk=ttyS0 console=ttyS0 memmap=2G$4G" '
+            f'-append "earlyprintk=ttyS0 console=ttyS0 memmap=2G$4G{kcmd_append}" '
             f'-m {self.node_config.memory} -smp {self.node_config.cores} '
         )
 

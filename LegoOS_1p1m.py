@@ -2,62 +2,69 @@
 Simple LegoOS experiment, which sets up a pComponent and a mComponent connected
 through ethernet.
 '''
-from simbricks.orchestration.experiments import Experiment
-from simbricks.orchestration.simulators import E1000NIC, SwitchNet
+import simbricks.orchestration.experiments as exp
+import simbricks.orchestration.simulators as sim
 
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from components import LegoOSQemuHost
+from components import LegoOSNode, LegoOSQemuHost
 
 SYNC = os.getenv('LEGOSIM_SYNC')
-PCOMPONENT_IMG = os.getenv('LEGOSIM_PCOMPONENT_IMG')
-MCOMPONENT_IMG = os.getenv('LEGOSIM_MCOMPONENT_IMG')
 
-if SYNC is None or PCOMPONENT_IMG is None or MCOMPONENT_IMG is None:
-    sys.stderr.write(
-        'LEGOSIM_SYNC LEGOSIM_PCOMPONENT_IMG or LEGOSIM_MCOMPONENT_IMG not specified')
-    exit(1)
+PCOMP_MAC = os.getenv('LEGOSIM_PCOMP_MAC')
+MCOMP_MAC = os.getenv('LEGOSIM_MCOMP_MAC')
 
-SYNC = True if SYNC == 1 else False
+PCOMP_IMG = os.getenv('LEGOSIM_PCOMP_IMG')
+MCOMP_IMG = os.getenv('LEGOSIM_MCOMP_IMG')
+
+if SYNC is None or PCOMP_MAC is None or MCOMP_MAC is None or \
+    PCOMP_IMG is None or MCOMP_IMG is None:
+    sys.stderr.write('Environment variables not set.\n')
+    sys.exit(1)
+
+SYNC = True if SYNC == '1' else False
 SYNC_MODE = 2 if SYNC else 0
 
-e = Experiment(name='LegoOS_1p1m')
+e = exp.Experiment(name='LegoOS_1p1m')
 e.checkpoint = True  # use checkpoint and restore to speed up simulation
 
-# pcomponent
-pcomponent = LegoOSQemuHost(PCOMPONENT_IMG, memory='8G', cores=8, debug=False, debug_port=9000)
-pcomponent.sync = SYNC
-pcomponent.name = 'pcomponent'
-pcomponent.wait = True
-e.add_host(pcomponent)
-
-# pcomponent NIC
-pcomponent_nic  = E1000NIC()
-pcomponent_nic.sync_mode = SYNC_MODE
-pcomponent_nic.mac = '52:54:00:12:34:56'
-pcomponent.add_nic(pcomponent_nic)
-e.add_nic(pcomponent_nic)
-
-# mcomponent
-mcomponent = LegoOSQemuHost(MCOMPONENT_IMG, memory='8G', cores=8, debug=False, debug_port=9001)
-mcomponent.sync = SYNC
-mcomponent.name = 'mcomponent'
-mcomponent.wait = True
-e.add_host(mcomponent)
-
-# mcomponent NIC
-mcomponent_nic = E1000NIC()
-mcomponent_nic.sync_mode = SYNC_MODE
-mcomponent_nic.mac = '52:54:00:12:34:57'
-mcomponent.add_nic(mcomponent_nic)
-e.add_nic(mcomponent_nic)
-
 # network
-network = SwitchNet()
+network = sim.SwitchNet()
 network.sync = SYNC
-pcomponent_nic.set_network(network)
-mcomponent_nic.set_network(network)
 e.add_network(network)
+
+# pComponent
+pcomp_nodec = LegoOSNode(PCOMP_IMG)
+pcomp = LegoOSQemuHost(pcomp_nodec, debug=False, debug_port=7500)
+pcomp.name = 'p-component'
+pcomp.wait = True
+e.add_host(pcomp)
+
+# pComponent NIC
+pcomp_nic = sim.E1000NIC()
+pcomp_nic.mac = PCOMP_MAC
+pcomp.add_nic(pcomp_nic)
+pcomp_nic.set_network(network)
+e.add_nic(pcomp_nic)
+
+# mComponent
+mcomp_nodec = LegoOSNode(MCOMP_IMG)
+mcomp = LegoOSQemuHost(mcomp_nodec, debug=False, debug_port=7501)
+mcomp.name = 'm-component'
+mcomp.wait = True
+e.add_host(mcomp)
+
+# mComponent NIC
+mcomp_nic = sim.E1000NIC()
+mcomp_nic.mac = MCOMP_MAC
+mcomp.add_nic(mcomp_nic)
+mcomp_nic.set_network(network)
+e.add_nic(mcomp_nic)
+
+# synchronization
+for s in e.all_simulators():
+    s.sync = SYNC
+    s.sync_mode = SYNC_MODE
 
 experiments = [e]

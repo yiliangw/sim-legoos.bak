@@ -38,8 +38,11 @@ run_exp_cmd := python3 $(simbricks_dir)/experiments/run.py --force --verbose \
 
 .PHONY: 1p1m-run
 1p1m-run:
-	LEGOSIM_SYNC=1 LEGOSIM_PCOMPONENT_IMG=$(img_dir)/1p1m_pcomponent.bzImage \
-	LEGOSIM_MCOMPONENT_IMG=$(img_dir)/1p1m_mcomponent.bzImage \
+	LEGOSIM_SYNC=1 \
+	LEGOSIM_PCOMP_IMG=$(img_dir)/1p1m_pcomponent.bzImage \
+	LEGOSIM_MCOMP_IMG=$(img_dir)/1p1m_mcomponent.bzImage \
+	LEGOSIM_PCOMP_MAC="52:54:00:12:34:56" \
+	LEGOSIM_MCOMP_MAC="52:54:00:12:34:57" \
 	$(run_exp_cmd) $(abspath $(repo_dir)/LegoOS_1p1m.py)
 
 # 1-pcomponent-1-mcomponent-1-scomponent experiment
@@ -49,7 +52,7 @@ run_exp_cmd := python3 $(simbricks_dir)/experiments/run.py --force --verbose \
 
 .PHONY: 1p1m1s-run
 1p1m1s-run:
-	LEGOSIM_SYNC=1 LEGOSIM_PCOMP_MAC="52:54:00:12:34:56" \
+	LEGOSIM_SYNC=0 LEGOSIM_PCOMP_MAC="52:54:00:12:34:56" \
 	LEGOSIM_MCOMP_MAC="52:54:00:12:34:57" LEGOSIM_SCOMP_MAC="52:54:00:12:34:58" \
 	LEGOSIM_PCOMP_IMG=$(img_dir)/1p1m1s_pcomponent.bzImage \
 	LEGOSIM_MCOMP_IMG=$(img_dir)/1p1m1s_mcomponent.bzImage \
