@@ -48,7 +48,7 @@ e.add_nic(pcomp_nic)
 mcomp_nodec = LegoOSNode(MCOMP_IMG)
 mcomp = LegoOSQemuHost(mcomp_nodec, debug=False, debug_port=7501)
 mcomp.name = 'm-component'
-mcomp.wait = True
+mcomp.wait = False
 e.add_host(mcomp)
 
 mcomp_nic = sim.E1000NIC()
@@ -62,7 +62,7 @@ scomp_nodec = LegoModuleNode()
 scomp_nodec.app = scomp_app
 scomp = LegoModuleQemuHost(scomp_nodec, debug=False, debug_port=7502)
 scomp.name = 's-component'
-scomp.wait = True
+scomp.wait = False
 e.add_host(scomp)
 
 scomp_nic = sim.E1000NIC()
@@ -78,9 +78,21 @@ scomp_nic.set_network(network)
 e.add_network(network)
 
 # synchronization
+SYNC_PERIOD = 2000
 for s in e.all_simulators():
     s.sync = SYNC
     s.sync_mode = SYNC_MODE
+    s.sync_period = SYNC_PERIOD
 
+# latency
+PCI_LATENCY = SYNC_PERIOD
+ETH_LATENCY = SYNC_PERIOD
+for s in e.hosts:
+    s.pci_latency = PCI_LATENCY
+for s in e.nics:
+    s.pci_latency = PCI_LATENCY
+    s.eth_latency = ETH_LATENCY
+for s in e.networks:
+    s.eth_latency = ETH_LATENCY
 
 experiments = [e]

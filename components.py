@@ -34,7 +34,6 @@ class LegoModuleLoading(nodec.AppConfig):
         cmds = []
         for module in self.module_list:
             cmds.append(f'insmod /tmp/guest/{module}')
-            cmds.append('sleep 1')
         cmds.append('sleep infinity')
         return cmds
 
